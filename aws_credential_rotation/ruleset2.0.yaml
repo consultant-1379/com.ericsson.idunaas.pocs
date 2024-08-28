@@ -1,0 +1,35 @@
+modelVersion: 2.0
+
+description: "EICaaS: AWS access/secret key rotation"
+
+env:
+  - PWD
+  - WORKSPACE
+  - IMAGE_VERSION
+  - GIT_COMMIT
+  - GERRIT_REFSPEC
+  - CHANGED_PYTHON_FILES
+  - CHANGED_DOCKERFILE
+
+rules:
+  docker:
+    - task: build-image
+      cmd: docker build --target "released_image" -t com.ericsson.oss.idunaas.aws-key-rotation .
+    - task: run
+      cmd: docker run -v ${env.PWD}/output:/app/output com.ericsson.oss.idunaas.aws-key-rotation:latest
+
+  update-ci-repo:
+    - task: copy-credentials
+      cmd: echo "run script to copy credential to individual repo"
+    - task: run-submodule-update
+      cmd: echo "cd in to submodule and execute git submodule update --remote and then git push --recurse-submodules=check/ondemand"
+
+
+  git-clean:
+    - task: Git clean
+      cmd: docker run --rm -v ${env.PWD}:/git/ armdocker.rnd.ericsson.se/dockerhub-ericsson-remote/alpine/git:v2.32.0 clean -xdff
+
+  delete-images-excluding-grafana:
+    - task: Clean up Docker images
+      cmd: bash -c 'scripts/clean_up_images_on_slave.sh'
+
